@@ -69,7 +69,7 @@ body::before { content: ''; position: fixed; inset: 0; background-image: url("da
 .content { padding: 24px 36px 48px; }
 
 /* STATS */
-.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+.stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 28px; }
 .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; position: relative; overflow: hidden; transition: border-color 0.2s; }
 .stat-card:hover { border-color: var(--border2); }
 .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
@@ -227,6 +227,38 @@ td { padding: 12px 16px; color: var(--text); vertical-align: middle; }
   thead th { padding: 8px 8px; font-size: 10px; }
   td { padding: 10px 8px; }
 }
+
+.mobile-user-bar {
+  display: none;
+}
+@media (max-width: 768px) {
+  .mobile-user-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .mobile-user-select {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 6px 28px 6px 10px;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239090a0' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+}
 </style>
 </head>
 <body>
@@ -266,6 +298,13 @@ td { padding: 12px 16px; color: var(--text); vertical-align: middle; }
 <main class="main">
   <!-- DASHBOARD -->
   <div id="sec-dashboard" class="section active">
+    <div class="mobile-user-bar">
+      <span style="font-size:12px;color:var(--text3);">Active User:</span>
+      <select id="mobileActiveUser" onchange="updateUserMobile()" class="mobile-user-select">
+        <option value="Jovel">👤 Jovel</option>
+        <option value="Regine">👤 Regine</option>
+      </select>
+    </div>
     <div class="topbar">
       <div>
         <div class="page-title">Dashboard</div>
@@ -514,7 +553,19 @@ function showSection(name) {
 }
 
 function updateUserDisplay() {
-  document.getElementById('addUserLabel').textContent = document.getElementById('activeUser').value;
+  const u = document.getElementById('activeUser').value;
+  document.getElementById('addUserLabel').textContent = u;
+  // also sync mobile user selector if exists
+  const mob = document.getElementById('mobileActiveUser');
+  if (mob && mob.value !== u) mob.value = u;
+  const desk = document.getElementById('activeUser');
+  if (desk && desk.value !== u) desk.value = u;
+}
+
+function updateUserMobile() {
+  const u = document.getElementById('mobileActiveUser').value;
+  document.getElementById('activeUser').value = u;
+  document.getElementById('addUserLabel').textContent = u;
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -532,12 +583,13 @@ const totalIncome = arr => sumBy(arr,'income') + sumBy(arr,'other_income');
 function renderDashboard() {
   const inc = totalIncome(entries), exp = sumBy(entries,'expense');
   const sav = sumBy(entries,'savings'), loan = sumBy(entries,'loan');
-  const bal = inc - exp - sav;
+  const bal = inc - exp - sav - loan;
   document.getElementById('statsGrid').innerHTML = `
     <div class="stat-card green"><div class="stat-label">Total Income</div><div class="stat-value green">${fmt(inc)}</div><div class="stat-icon">💰</div></div>
     <div class="stat-card red"><div class="stat-label">Total Expenses</div><div class="stat-value red">${fmt(exp)}</div><div class="stat-icon">💸</div></div>
     <div class="stat-card blue"><div class="stat-label">Savings</div><div class="stat-value blue">${fmt(sav)}</div><div class="stat-icon">🏦</div></div>
     <div class="stat-card amber"><div class="stat-label">Loans / Utang</div><div class="stat-value amber">${fmt(loan)}</div><div class="stat-icon">📋</div></div>
+    <div class="stat-card ${bal>=0?'green':'red'}"><div class="stat-label">💵 Remaining</div><div class="stat-value ${bal>=0?'green':'red'}">${fmt(bal)}</div><div class="stat-icon">${bal>=0?'✅':'⚠️'}</div></div>
   `;
   const recent = entries.slice(0, 8);
   document.getElementById('recentTable').innerHTML = recent.length ? buildTable(recent, false) : emptyState();
@@ -581,19 +633,20 @@ function emptyState() {
 function renderSummary() {
   const inc = totalIncome(entries), exp = sumBy(entries,'expense');
   const sav = sumBy(entries,'savings'), loan = sumBy(entries,'loan');
-  const bal = inc - exp - sav;
+  const bal = inc - exp - sav - loan;
   document.getElementById('summaryStats').innerHTML = `
     <div class="stat-card green"><div class="stat-label">Total Income</div><div class="stat-value green">${fmt(inc)}</div></div>
     <div class="stat-card red"><div class="stat-label">Total Expenses</div><div class="stat-value red">${fmt(exp)}</div></div>
     <div class="stat-card blue"><div class="stat-label">Savings</div><div class="stat-value blue">${fmt(sav)}</div></div>
     <div class="stat-card amber"><div class="stat-label">Loans / Utang</div><div class="stat-value amber">${fmt(loan)}</div></div>
+    <div class="stat-card ${bal>=0?'green':'red'}"><div class="stat-label">💵 Remaining</div><div class="stat-value ${bal>=0?'green':'red'}">${fmt(bal)}</div></div>
   `;
   const users = ['Jovel','Regine'];
   const colors = [{av:'av-u1',initial:'U1'},{av:'av-u2',initial:'U2'}];
   document.getElementById('summaryBreakdown').innerHTML = users.map((u,i) => {
     const ue = entries.filter(e=>e.user===u);
     const uInc=totalIncome(ue), uExp=sumBy(ue,'expense'), uSav=sumBy(ue,'savings'), uLoan=sumBy(ue,'loan');
-    const uBal=uInc-uExp-uSav;
+    const uBal=uInc-uExp-uSav-uLoan;
     return `<div class="breakdown-card">
       <div class="breakdown-user">
         <div class="breakdown-avatar ${colors[i].av}">${colors[i].initial}</div>
@@ -603,7 +656,7 @@ function renderSummary() {
       <div class="breakdown-row"><span class="breakdown-row-label">Expenses</span><span class="amount-neg">${fmt(uExp)}</span></div>
       <div class="breakdown-row"><span class="breakdown-row-label">Savings</span><span class="amount-neu">${fmt(uSav)}</span></div>
       <div class="breakdown-row"><span class="breakdown-row-label">Loans / Utang</span><span class="amount-neg">${fmt(uLoan)}</span></div>
-      <div class="breakdown-row"><span class="breakdown-row-label" style="font-weight:600;color:var(--text)">Net Balance</span><span class="${uBal>=0?'amount-pos':'amount-neg'}" style="font-size:15px;">${fmt(uBal)}</span></div>
+      <div class="breakdown-row" style="border-top: 1px solid var(--border2); margin-top:4px; padding-top:8px;"><span class="breakdown-row-label" style="font-weight:600;color:var(--text)">💵 Remaining</span><span class="${uBal>=0?'amount-pos':'amount-neg'}" style="font-size:16px;font-weight:700;">${fmt(uBal)}</span></div>
     </div>`;
   }).join('');
 }
