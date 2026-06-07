@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FinTrack — JMMR Finance Tracker</title>
+<title>JMMR — Personal Finance Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
 :root {
@@ -29,6 +29,15 @@
   --amber-border: #fbbf2430;
   --accent: #a78bfa;
   --accent2: #7c3aed;
+  --teal: #2dd4bf;
+  --teal-bg: #2dd4bf15;
+  --teal-border: #2dd4bf30;
+  --orange: #fb923c;
+  --orange-bg: #fb923c15;
+  --orange-border: #fb923c30;
+  --pink: #f472b6;
+  --pink-bg: #f472b615;
+  --pink-border: #f472b630;
   --radius: 12px;
   --radius-sm: 8px;
 }
@@ -78,6 +87,9 @@ body::before { content: ''; position: fixed; inset: 0; background-image: url("da
 .stat-card.blue::before { background: var(--blue); }
 .stat-card.amber::before { background: var(--amber); }
 .stat-card.purple::before { background: var(--accent); }
+.stat-card.teal::before { background: var(--teal); }
+.stat-card.orange::before { background: var(--orange); }
+.stat-card.pink::before { background: var(--pink); }
 .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
 .stat-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
 .stat-value.green { color: var(--green); }
@@ -85,6 +97,9 @@ body::before { content: ''; position: fixed; inset: 0; background-image: url("da
 .stat-value.blue { color: var(--blue); }
 .stat-value.amber { color: var(--amber); }
 .stat-value.purple { color: var(--accent); }
+.stat-value.teal { color: var(--teal); }
+.stat-value.orange { color: var(--orange); }
+.stat-value.pink { color: var(--pink); }
 .stat-icon { position: absolute; right: 16px; top: 16px; font-size: 18px; opacity: 0.3; }
 
 /* PANEL */
@@ -140,6 +155,9 @@ td { padding: 12px 16px; color: var(--text); vertical-align: middle; }
 .badge-savings { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
 .badge-loan { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
 .badge-other { background: rgba(167,139,250,0.1); color: var(--accent); border: 1px solid rgba(167,139,250,0.2); }
+.badge-transportation { background: var(--teal-bg); color: var(--teal); border: 1px solid var(--teal-border); }
+.badge-food { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); }
+.badge-school { background: var(--pink-bg); color: var(--pink); border: 1px solid var(--pink-border); }
 .user-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); padding: 3px 10px; border-radius: 20px; font-size: 11px; color: var(--text2); }
 .user-dot { width: 6px; height: 6px; border-radius: 50%; }
 .dot-u1 { background: var(--accent); }
@@ -345,6 +363,9 @@ td { padding: 12px 16px; color: var(--text); vertical-align: middle; }
                 <option value="expense">💸 Expense</option>
                 <option value="savings">🏦 Savings</option>
                 <option value="loan">📋 Utang / Loan</option>
+                <option value="transportation">🚌 Transportation</option>
+                <option value="food">🍽️ Food</option>
+                <option value="school">🎓 School Expenses</option>
               </select>
             </div>
             <div class="form-group">
@@ -397,6 +418,9 @@ td { padding: 12px 16px; color: var(--text); vertical-align: middle; }
             <option value="expense">Expense</option>
             <option value="savings">Savings</option>
             <option value="loan">Loan</option>
+            <option value="transportation">Transportation</option>
+            <option value="food">Food</option>
+            <option value="school">School Expenses</option>
           </select>
           <input type="month" id="filterMonth" onchange="renderHistory()"/>
           <span id="entryCount" style="font-size:12px;color:var(--text3);margin-left:auto;"></span>
@@ -555,7 +579,6 @@ function showSection(name) {
 function updateUserDisplay() {
   const u = document.getElementById('activeUser').value;
   document.getElementById('addUserLabel').textContent = u;
-  // also sync mobile user selector if exists
   const mob = document.getElementById('mobileActiveUser');
   if (mob && mob.value !== u) mob.value = u;
   const desk = document.getElementById('activeUser');
@@ -570,19 +593,40 @@ function updateUserMobile() {
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 const fmt = n => '₱' + parseFloat(n||0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const typeLabel = t => ({ income:'Income', other_income:'Other Income', expense:'Expense', savings:'Savings', loan:'Loan' }[t]||t);
+const typeLabel = t => ({
+  income: 'Income',
+  other_income: 'Other Income',
+  expense: 'Expense',
+  savings: 'Savings',
+  loan: 'Loan',
+  transportation: 'Transportation',
+  food: 'Food',
+  school: 'School Expenses'
+}[t] || t);
 const typeBadge = t => {
-  const m = { income:'badge-income', other_income:'badge-other', expense:'badge-expense', savings:'badge-savings', loan:'badge-loan' };
+  const m = {
+    income: 'badge-income',
+    other_income: 'badge-other',
+    expense: 'badge-expense',
+    savings: 'badge-savings',
+    loan: 'badge-loan',
+    transportation: 'badge-transportation',
+    food: 'badge-food',
+    school: 'badge-school'
+  };
   return `<span class="badge ${m[t]||''}">${typeLabel(t)}</span>`;
 };
 const userChip = u => `<span class="user-chip"><span class="user-dot ${u==='Jovel'?'dot-u1':'dot-u2'}"></span>${u}</span>`;
 const sumBy = (arr, type) => arr.filter(e => e.type===type).reduce((a,e) => a+(parseFloat(e.amt)||0), 0);
 const totalIncome = arr => sumBy(arr,'income') + sumBy(arr,'other_income');
+// Transportation, Food, School are expense-like (money going out)
+const totalExpenseTypes = arr => sumBy(arr,'expense') + sumBy(arr,'transportation') + sumBy(arr,'food') + sumBy(arr,'school');
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function renderDashboard() {
-  const inc = totalIncome(entries), exp = sumBy(entries,'expense');
+  const inc = totalIncome(entries), exp = totalExpenseTypes(entries);
   const sav = sumBy(entries,'savings'), loan = sumBy(entries,'loan');
+  const trans = sumBy(entries,'transportation'), food = sumBy(entries,'food'), school = sumBy(entries,'school');
   const bal = inc - exp - sav - loan;
   document.getElementById('statsGrid').innerHTML = `
     <div class="stat-card green"><div class="stat-label">Total Income</div><div class="stat-value green">${fmt(inc)}</div><div class="stat-icon">💰</div></div>
@@ -590,6 +634,9 @@ function renderDashboard() {
     <div class="stat-card blue"><div class="stat-label">Savings</div><div class="stat-value blue">${fmt(sav)}</div><div class="stat-icon">🏦</div></div>
     <div class="stat-card amber"><div class="stat-label">Loans / Utang</div><div class="stat-value amber">${fmt(loan)}</div><div class="stat-icon">📋</div></div>
     <div class="stat-card ${bal>=0?'green':'red'}"><div class="stat-label">💵 Remaining</div><div class="stat-value ${bal>=0?'green':'red'}">${fmt(bal)}</div><div class="stat-icon">${bal>=0?'✅':'⚠️'}</div></div>
+    <div class="stat-card teal"><div class="stat-label">Transportation</div><div class="stat-value teal">${fmt(trans)}</div><div class="stat-icon">🚌</div></div>
+    <div class="stat-card orange"><div class="stat-label">Food</div><div class="stat-value orange">${fmt(food)}</div><div class="stat-icon">🍽️</div></div>
+    <div class="stat-card pink"><div class="stat-label">School Expenses</div><div class="stat-value pink">${fmt(school)}</div><div class="stat-icon">🎓</div></div>
   `;
   const recent = entries.slice(0, 8);
   document.getElementById('recentTable').innerHTML = recent.length ? buildTable(recent, false) : emptyState();
@@ -619,7 +666,7 @@ function buildTable(data, showDelete) {
       <td>${typeBadge(e.type)}</td>
       <td style="font-weight:500">${e.cat}</td>
       <td style="color:var(--text3);font-size:12px;">${e.note||'—'}</td>
-      <td style="text-align:right;" class="${e.type==='expense'||e.type==='loan'?'amount-neg':e.type==='savings'?'amount-neu':'amount-pos'}">${fmt(e.amt)}</td>
+      <td style="text-align:right;" class="${['expense','loan','transportation','food','school'].includes(e.type)?'amount-neg':e.type==='savings'?'amount-neu':'amount-pos'}">${fmt(e.amt)}</td>
       ${showDelete?`<td><button class="btn-danger-ghost" onclick="deleteEntry(${e.id})">✕</button></td>`:''}
     </tr>`).join('')}</tbody>
   </table>`;
@@ -631,8 +678,9 @@ function emptyState() {
 
 // ─── SUMMARY ──────────────────────────────────────────────────────────────────
 function renderSummary() {
-  const inc = totalIncome(entries), exp = sumBy(entries,'expense');
+  const inc = totalIncome(entries), exp = totalExpenseTypes(entries);
   const sav = sumBy(entries,'savings'), loan = sumBy(entries,'loan');
+  const trans = sumBy(entries,'transportation'), food = sumBy(entries,'food'), school = sumBy(entries,'school');
   const bal = inc - exp - sav - loan;
   document.getElementById('summaryStats').innerHTML = `
     <div class="stat-card green"><div class="stat-label">Total Income</div><div class="stat-value green">${fmt(inc)}</div></div>
@@ -640,12 +688,16 @@ function renderSummary() {
     <div class="stat-card blue"><div class="stat-label">Savings</div><div class="stat-value blue">${fmt(sav)}</div></div>
     <div class="stat-card amber"><div class="stat-label">Loans / Utang</div><div class="stat-value amber">${fmt(loan)}</div></div>
     <div class="stat-card ${bal>=0?'green':'red'}"><div class="stat-label">💵 Remaining</div><div class="stat-value ${bal>=0?'green':'red'}">${fmt(bal)}</div></div>
+    <div class="stat-card teal"><div class="stat-label">Transportation</div><div class="stat-value teal">${fmt(trans)}</div></div>
+    <div class="stat-card orange"><div class="stat-label">Food</div><div class="stat-value orange">${fmt(food)}</div></div>
+    <div class="stat-card pink"><div class="stat-label">School Expenses</div><div class="stat-value pink">${fmt(school)}</div></div>
   `;
   const users = ['Jovel','Regine'];
   const colors = [{av:'av-u1',initial:'U1'},{av:'av-u2',initial:'U2'}];
   document.getElementById('summaryBreakdown').innerHTML = users.map((u,i) => {
     const ue = entries.filter(e=>e.user===u);
-    const uInc=totalIncome(ue), uExp=sumBy(ue,'expense'), uSav=sumBy(ue,'savings'), uLoan=sumBy(ue,'loan');
+    const uInc=totalIncome(ue), uExp=totalExpenseTypes(ue), uSav=sumBy(ue,'savings'), uLoan=sumBy(ue,'loan');
+    const uTrans=sumBy(ue,'transportation'), uFood=sumBy(ue,'food'), uSchool=sumBy(ue,'school');
     const uBal=uInc-uExp-uSav-uLoan;
     return `<div class="breakdown-card">
       <div class="breakdown-user">
@@ -654,6 +706,9 @@ function renderSummary() {
       </div>
       <div class="breakdown-row"><span class="breakdown-row-label">Income</span><span class="amount-pos">${fmt(uInc)}</span></div>
       <div class="breakdown-row"><span class="breakdown-row-label">Expenses</span><span class="amount-neg">${fmt(uExp)}</span></div>
+      <div class="breakdown-row"><span class="breakdown-row-label">↳ Transportation</span><span style="color:var(--teal);font-weight:500">${fmt(uTrans)}</span></div>
+      <div class="breakdown-row"><span class="breakdown-row-label">↳ Food</span><span style="color:var(--orange);font-weight:500">${fmt(uFood)}</span></div>
+      <div class="breakdown-row"><span class="breakdown-row-label">↳ School Expenses</span><span style="color:var(--pink);font-weight:500">${fmt(uSchool)}</span></div>
       <div class="breakdown-row"><span class="breakdown-row-label">Savings</span><span class="amount-neu">${fmt(uSav)}</span></div>
       <div class="breakdown-row"><span class="breakdown-row-label">Loans / Utang</span><span class="amount-neg">${fmt(uLoan)}</span></div>
       <div class="breakdown-row" style="border-top: 1px solid var(--border2); margin-top:4px; padding-top:8px;"><span class="breakdown-row-label" style="font-weight:600;color:var(--text)">💵 Remaining</span><span class="${uBal>=0?'amount-pos':'amount-neg'}" style="font-size:16px;font-weight:700;">${fmt(uBal)}</span></div>
