@@ -465,7 +465,7 @@ td { padding: 12px 16px; color: var(--text); vertical-align: middle; }
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxWCS2KDkFG3BmtKqTyG4ea8xsPg_ycs30VXoTDXJYQyxdXPKMsHt7QJpmnaRC7rX81Cw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw5x_rlSNgAsNpi3QjSEztWD_rPr9L72XN28SikPOu5aXA-6fESLOh6JCiATacklFuxYA/exec';
 
 // ─── SESSION ──────────────────────────────────────────────────────────────────
 let currentUser = null; // { username, display_name, sheet_name }
@@ -505,13 +505,46 @@ function switchAuthTab(tab) {
   document.getElementById('signupSuccess').style.display = 'none';
 }
 
+// ─── JSONP HELPER (bypasses CORS for Google Apps Script) ─────────────────────
+function gasRequest(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 9999);
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      reject(new Error('timeout'));
+    }, 20000);
+
+    window[cbName] = function(data) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      const tag = document.getElementById('jsonp_' + cbName);
+      if (tag) tag.remove();
+      resolve(data);
+    };
+
+    const qs = Object.entries({ ...params, callback: cbName })
+      .map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v))
+      .join('&');
+
+    const script = document.createElement('script');
+    script.id = 'jsonp_' + cbName;
+    script.src = SCRIPT_URL + '?' + qs;
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      script.remove();
+      reject(new Error('script error'));
+    };
+    document.head.appendChild(script);
+  });
+}
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 async function doLogin() {
   const username = document.getElementById('loginUsername').value.trim();
   const pin = document.getElementById('loginPin').value.trim();
-  const errEl = document.getElementById('loginError');
   const btn = document.getElementById('loginBtn');
-  errEl.style.display = 'none';
+  document.getElementById('loginError').style.display = 'none';
 
   if (!username || !pin) { showAuthError('loginError', 'Please enter username and PIN.'); return; }
 
@@ -519,13 +552,7 @@ async function doLogin() {
   showLoading('Logging in…');
 
   try {
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'login', username, pin })
-    });
-    const data = await res.json();
-
+    const data = await gasRequest({ action: 'login', username, pin });
     if (data.status === 'ok') {
       currentUser = { username: data.username, display_name: data.display_name, sheet_name: data.sheet_name };
       saveSession(currentUser);
@@ -534,7 +561,7 @@ async function doLogin() {
       showAuthError('loginError', data.msg || 'Login failed.');
     }
   } catch(err) {
-    showAuthError('loginError', 'Connection error. Check internet.');
+    showAuthError('loginError', 'Connection error. Please try again.');
   } finally {
     btn.disabled = false; btn.textContent = 'Login →';
     hideLoading();
@@ -562,13 +589,7 @@ async function doSignup() {
   showLoading('Creating your account…');
 
   try {
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'signup', username, display_name, pin })
-    });
-    const data = await res.json();
-
+    const data = await gasRequest({ action: 'signup', username, display_name, pin });
     if (data.status === 'ok') {
       document.getElementById('signupDisplay').value = '';
       document.getElementById('signupUsername').value = '';
@@ -582,7 +603,7 @@ async function doSignup() {
       showAuthError('signupError', data.msg || 'Sign up failed.');
     }
   } catch(err) {
-    showAuthError('signupError', 'Connection error. Check internet.');
+    showAuthError('signupError', 'Connection error. Please try again.');
   } finally {
     btn.disabled = false; btn.textContent = 'Create Account →';
     hideLoading();
@@ -649,9 +670,8 @@ async function loadEntries() {
   setSyncStatus('syncing', 'Syncing…');
   showLoading('Loading your data…');
   try {
-    const res = await fetch(`${SCRIPT_URL}?action=get_entries&sheet_name=${encodeURIComponent(currentUser.sheet_name)}`);
-    const data = await res.json();
-    entries = data.filter(e => e.id).map(e => ({
+    const data = await gasRequest({ action: 'get_entries', sheet_name: currentUser.sheet_name });
+    entries = (Array.isArray(data) ? data : []).filter(e => e.id).map(e => ({
       id: String(e.id), date: e.date, user: e.user || currentUser.display_name,
       type: e.type, cat: e.cat, amt: parseFloat(e.amt) || 0, note: e.note || ''
     })).sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
